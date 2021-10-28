@@ -17,14 +17,14 @@ app.use(BodyParser.json({ limit: "5mb" }));
 var minioClient = new Minio.Client({
     endPoint: process.env.MINIO_ENDPOINT || '127.0.0.1',
     port: process.env.MINIO_PORT || 9005,
-    useSSL: false,
+    useSSL: false, 
     accessKey: process.env.ACCESSKEY || 'AKIAIOSFODNN7EXAMPLE',
     secretKey: process.env.SECRETKEY || 'wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY'
 });
 
 app.post("/miniofiles/upload", Multer({ storage: Multer.memoryStorage() }).single("upload"), function (request, response) {
     const bucket = request.query.bucket || 'ecollect';
-    const accnumber = request.body.accnumber || '00000000000000';
+    const accnumber = request.body.accnumber || request.query.accnumber || '00000000000000';
     minioClient.putObject(bucket, accnumber + '_' + Date.now() + '_' + request.file.originalname, request.file.buffer, function (error, objInfo) {
         if (error) {
             console.log(error);
@@ -43,7 +43,7 @@ app.post("/miniofiles/upload", Multer({ storage: Multer.memoryStorage() }).singl
 
 app.post("/miniofiles/uploadfile", Multer({ dest: "./uploads/" }).single("file"), function (request, response) {
     const bucket = request.query.bucket || 'ecollect';
-    const accnumber = request.body.accnumber || '00000000000000';
+    const accnumber = request.body.accnumber || request.query.accnumber || '00000000000000';
     const savedfilename = accnumber + '_' + Date.now() + '_' + request.file.originalname
     var metaData = {
         'Content-Type': 'text/html',
@@ -72,34 +72,10 @@ app.post("/miniofiles/uploadfile", Multer({ dest: "./uploads/" }).single("file")
 });
 
 app.get("/miniofiles/download", function (request, response) {
-    /*minioClient.getObject("ecollect", request.query.filename, function (error, stream) {
-        if (error) {
-            return response.status(500).send(error);
-        }
-        stream.pipe(response);
-    });*/
     minioClient.presignedUrl('GET', 'ecollect', request.query.filename, 24 * 60 * 60, function (err, presignedUrl) {
         if (err) return console.log(err)
         return response.status(200).send({ url: presignedUrl })
     })
-
-    /*var size = 0
-    minioClient.getObject('ecollect', request.query.filename, function (err, dataStream) {
-        if (err) {
-            return console.log(err)
-        }
-        dataStream.on('data', function (chunk) {
-            size += chunk.length
-            dataStream.pipe(response)
-        })
-        dataStream.on('end', function () {
-            console.log('End. Total size = ' + size)
-            
-        })
-        dataStream.on('error', function (err) {
-            console.log(err)
-        })
-    })*/
 
 });
 
@@ -132,7 +108,6 @@ app.post("/miniofiles/create-bucket", function (request, response) {
         })
     })
 });
-
 
 minioClient.bucketExists("ecollect", function (error) {
     if (error) {

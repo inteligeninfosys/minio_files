@@ -2,7 +2,6 @@ var Express = require("express");
 var Multer = require("multer");
 var Minio = require("minio");
 var cors = require('cors');
-var BodyParser = require("body-parser");
 const fs = require('fs')
 var app = Express();
 
@@ -12,17 +11,14 @@ const corsConfig = {
 };
 
 app.use(cors(corsConfig));
-app.use(BodyParser.json({ limit: "5mb" }));
-
-console.log('MINIO_ENDPOINT==' + process.env.MINIO_ENDPOINT)
-console.log('MINIO_PORT=='+process.env.MINIO_PORT)
-console.log(1 * process.env.MINIO_PORT)
+//app.use(BodyParser.json({ limit: "5mb" }));
+app.use(Express.json());
 
 var minioClient = new Minio.Client({
     endPoint: process.env.MINIO_ENDPOINT || '127.0.0.1',
-    //port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : 9005,
-    //port: process.env.MINIO_PORT || parseInt("9005"),
-    port: 1 * process.env.MINIO_PORT,
+    port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : 9005,
+    //port: 1 * process.env.MINIO_PORT || parseInt("9005"),
+    //port: 1 * process.env.MINIO_PORT,
     useSSL: false, 
     accessKey: process.env.ACCESSKEY || 'AKIAIOSFODNN7EXAMPLE',
     secretKey: process.env.SECRETKEY || 'wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY'

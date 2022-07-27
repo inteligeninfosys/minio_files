@@ -14,15 +14,18 @@ app.use(cors(corsConfig));
 //app.use(BodyParser.json({ limit: "5mb" }));
 app.use(Express.json());
 
+
+
 var minioClient = new Minio.Client({
     endPoint: process.env.MINIO_ENDPOINT || '127.0.0.1',
     port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : 9005,
     //port: 1 * process.env.MINIO_PORT || parseInt("9005"),
     //port: 1 * process.env.MINIO_PORT,
-    useSSL: false, 
+    useSSL: false,
     accessKey: process.env.ACCESSKEY || 'AKIAIOSFODNN7EXAMPLE',
     secretKey: process.env.SECRETKEY || 'wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY'
 });
+
 
 app.post("/miniofiles/upload", Multer({ storage: Multer.memoryStorage() }).single("upload"), function (request, response) {
     const bucket = request.query.bucket || 'ecollect';
@@ -112,14 +115,54 @@ app.post("/miniofiles/create-bucket", function (request, response) {
     })
 });
 
-minioClient.bucketExists("ecollect", function (error) {
-    if (error) {
-        return console.log(error);
+
+app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), async (req, res, next) => {
+    if (req.file) {
+        var originalname = req.file.originalname.split(' ');
+        const fileName = originalname.join('_');
+        try {
+            await minioClient.putObject('test-bucket', fileName, req.file.buffer);
+
+            // get url
+            const url = await minioClient.presignedGetObject('test-bucket', fileName);
+
+            var id = uuid();
+            // link valid for 3 minutes (180 seconds)
+            // save link to redis
+            redisClient.setex(id, 180, url, (err, reply) => {
+                if (err) {
+                    return res.json({ 'success': false, 'message': err });
+                }
+                return res.json({ 'success': true, 'message': id });
+            });
+        } catch (err) {
+            return res.json({ 'success': false, 'message': err });
+        }
     }
-    var server = app.listen(process.env.PORT || 4400, function () {
-        console.log("Listening on port %s...", server.address().port);
-    });
 });
+
+(async () => {
+    await minioClient.bucketExists("ecollect", function (error, exists) {
+        if (error) {
+            return console.log(error);
+        }
+
+        if (!exists) {
+            minioClient.makeBucket('ecollect', 'us-east-1', (err) => {
+                if (err) {
+                    console.log('minio error ' + err);
+                }
+            });
+
+            console.log('Bucket created successfully in "us-east-1".')
+        }
+
+        var server = app.listen(process.env.PORT || 4400, function () {
+            console.log("Listening on port %s...", server.address().port);
+        });
+    });
+})();
+
 
 function deleteFile(req) {
     fs.unlink(req.file.path, (err) => {

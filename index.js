@@ -141,6 +141,10 @@ app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), 
     }
 });
 
+async function handler(req, res) {
+    //
+}
+
 (async () => {
     await minioClient.bucketExists("ecollect", function (error, exists) {
         if (error) {
@@ -157,11 +161,13 @@ app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), 
             console.log('Bucket created successfully in "us-east-1".')
         }
 
-        var server = app.listen(process.env.PORT || 4400, function () {
-            console.log("Listening on port %s...", server.address().port);
-        });
+        
     });
 })();
+
+var server = app.listen(process.env.PORT || 4400, function () {
+    console.log("Listening on port %s...", server.address().port);
+});
 
 
 function deleteFile(req) {

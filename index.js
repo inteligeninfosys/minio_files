@@ -141,6 +141,7 @@ app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), 
     }
 });
 
+/*
 async function handler(req, res) {
     //
 }
@@ -163,7 +164,7 @@ async function handler(req, res) {
 
         
     });
-})();
+})();*/
 
 var server = app.listen(process.env.PORT || 4400, function () {
     console.log("Listening on port %s...", server.address().port);

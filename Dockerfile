@@ -13,6 +13,6 @@ COPY --chown=node . .
 
 EXPOSE 4400
 
-CMD ["node" , "index.js"]
+CMD ["node" , "index-async.js"]
 
 # docker build -t migutak/minio_files:5.4 .

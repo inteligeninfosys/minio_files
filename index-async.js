@@ -27,26 +27,28 @@ var minioClient = new Minio.Client({
 });
 
 
-app.post("/miniofiles/upload", Multer({ storage: Multer.memoryStorage() }).single("upload"), function (request, response) {
+app.post("/miniofiles/upload", Multer({ storage: Multer.memoryStorage() }).single("upload"), async (request, response) => {
     const bucket = request.query.bucket || 'ecollect';
     const accnumber = request.body.accnumber || request.query.accnumber || '00000000000000';
-    minioClient.putObject(bucket, accnumber + '_' + Date.now() + '_' + request.file.originalname, request.file.buffer, function (error, objInfo) {
-        if (error) {
-            console.log(error);
-            response.status(500).json({
-                success: false,
-                error: error.message
-            })
-        }
+    try {
+        const resp = await minioClient.putObject(bucket, accnumber + '_' + Date.now() + '_' + request.file.originalname, request.file.buffer);
+
         response.status(200).json({
             success: true,
             file: request.file,
-            objInfo: objInfo
+            objInfo: resp
         })
-    });
+    } catch (error) {
+        console.log(error);
+        response.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
+
 });
 
-app.post("/miniofiles/uploadfile", Multer({ dest: "./uploads/" }).single("file"), function (request, response) {
+app.post("/miniofiles/uploadfile", Multer({ dest: "./uploads/" }).single("file"), async (request, response) => {
     const bucket = request.query.bucket || 'ecollect';
     const accnumber = request.body.accnumber || request.query.accnumber || '00000000000000';
     const savedfilename = accnumber + '_' + Date.now() + '_' + request.file.originalname
@@ -56,67 +58,50 @@ app.post("/miniofiles/uploadfile", Multer({ dest: "./uploads/" }).single("file")
         'X-Amz-Meta-Testing': 1234,
         'example': 5678
     }
-    minioClient.fPutObject(bucket, savedfilename, request.file.path, metaData, function (error, objInfo) {
-        if (error) {
-            console.log(error);
-            response.status(500).json({
-                success: false,
-                error: error.message
-            })
-            deleteFile(request);
-        }
-        //response.send(request.file);
-        console.log(objInfo)
+    try {
+        const resp = await minioClient.fPutObject(bucket, savedfilename, request.file.path, metaData);
+
         response.status(200).json({
             success: true,
             savedfilename: savedfilename,
             file: request.file,
-            objInfo: objInfo
+            objInfo: resp
         })
         deleteFile(request);
-    });
+    } catch (error) {
+        console.log(error);
+        response.status(500).json({
+            success: false,
+            error: error.message
+        })
+        deleteFile(request);
+    }
+
 });
 
-app.get("/miniofiles/download", function (request, response) {
-    minioClient.presignedUrl('GET', 'ecollect', request.query.filename, 24 * 60 * 60, function (err, presignedUrl) {
-        if (err) return console.log(err)
+app.get("/miniofiles/download", async (request, response) => {
+    try {
+        const presignedUrl = await minioClient.presignedUrl('GET', 'ecollect', request.query.filename, 24 * 60 * 60);
         return response.status(200).send({ url: presignedUrl })
-    })
-
+    } catch (error) {
+        return console.log(err)
+    }
 });
 
-app.post("/miniofiles/download", function (request, response) {
+app.post("/miniofiles/download", async (request, response) => {
     const bucket = request.body.bucket;
     const filename = request.body.filename;
-    minioClient.getObject(bucket, filename, function (error, stream) {
-        if (error) {
-            console.log(error)
-            return response.status(500).send(error);
-        }
+    try {
+        const stream = await minioClient.getObject(bucket, filename);
         stream.pipe(response);
-    });
-
+    } catch (error) {
+        console.log(error)
+        return response.status(500).send(error);
+    }
 });
 
-app.post("/miniofiles/create-bucket", function (request, response) {
-    const bucket = request.body.bucket;
-    minioClient.makeBucket(bucket, function (err) {
-        if (err) {
-            console.log('Error creating bucket.', err)
-            return response.status(500).json({
-                success: false,
-                message: 'Error creating bucket.' + err.message
-            })
-        }
-        console.log('Bucket created successfully in "us-east-1".')
-        response.status(200).json({
-            success: true,
-            message: bucket + ' Created !'
-        })
-    })
-});
 
-app.get("/miniofiles/downloadasync", async (request, response, next) =>{
+app.get("/miniofiles/downloadasync", async (request, response, next) => {
     const fileName = request.query.filename;
     try {
         // get url
@@ -154,41 +139,6 @@ app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), 
         }
     }
 });
-
-(async () => {
-    try {
-        const resp = await minioClient.bucketExists("ecollect-1");
-        if (!resp) {
-            await minioClient.makeBucket('ecollect-1', 'us-east-1');
-            console.log('Bucket created successfully in "us-east-1".')
-        } else {
-            console.log('Bucket already exists!');
-        }
-    } catch (error) {
-        console.log(error)
-    }
-    
-})();
-
-/*(async () => { 
-    await minioClient.bucketExists("ecollect", function (error, exists) {
-        if (error) {
-            return console.log(error);
-        }
-
-        if (!exists) {
-            minioClient.makeBucket('ecollect', 'us-east-1', (err) => {
-                if (err) {
-                    console.log('minio error ' + err);
-                }
-            });
-
-            console.log('Bucket created successfully in "us-east-1".')
-        }
-
-        
-    });
-})();*/
 
 var server = app.listen(process.env.PORT || 4400, function () {
     console.log("Listening on port %s...", server.address().port);

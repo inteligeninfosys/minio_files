@@ -154,12 +154,22 @@ app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), 
     }
 });
 
-/*
-async function handler(req, res) {
-    //
-}
-
 (async () => {
+    try {
+        const resp = await minioClient.bucketExists("ecollect-1");
+        if (!resp) {
+            await minioClient.makeBucket('ecollect-1', 'us-east-1');
+            console.log('Bucket created successfully in "us-east-1".')
+        } else {
+            console.log('Bucket already exists!');
+        }
+    } catch (error) {
+        console.log(error)
+    }
+    
+})();
+
+/*(async () => { 
     await minioClient.bucketExists("ecollect", function (error, exists) {
         if (error) {
             return console.log(error);

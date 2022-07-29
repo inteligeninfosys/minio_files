@@ -115,6 +115,19 @@ app.post("/miniofiles/create-bucket", function (request, response) {
     })
 });
 
+app.get("/miniofiles/downloadasync", async (request, response, next) =>{
+    const fileName = request.query.filename;
+    try {
+        // get url
+        const url = await minioClient.presignedGetObject('test-bucket', fileName);
+        return response.status(200).send({ url: url })
+    } catch (error) {
+        console.log(error)
+        return response.status(500).json({ 'success': false, 'message': error.message });
+    }
+
+});
+
 
 app.post('/upload', Multer({ storage: Multer.memoryStorage() }).single("file"), async (req, res, next) => {
     if (req.file) {

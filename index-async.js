@@ -1,3 +1,4 @@
+require('dotenv').config();
 var Express = require("express");
 var Multer = require("multer");
 var Minio = require("minio");

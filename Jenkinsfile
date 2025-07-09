@@ -1,31 +1,77 @@
-node {
-      def app
-      stage('Clone repository') {
+pipeline {
+  agent any
 
-            checkout scm
+  environment {
+    IMAGE_NAME = 'docker.io/inteligeninfosys/credit-scoring-api'
+    DOCKER_CREDENTIALS_ID = 'dockerhub-creds'  // Jenkins Docker credentials
+  }
+
+  stages {
+    stage('Set Tag') {
+            steps {
+                script {
+                    def timestamp = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
+                    env.IMAGE_TAG = timestamp
+                }
+            }
+    }
+
+    stage('Checkout') {
+      steps {
+        echo "Checking out code..."
+        checkout scm
       }
-      stage("Docker build"){
-        app = docker.build("migutak/minio_files")
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        echo "Installing Node.js dependencies..."
+        sh 'npm install'
       }
+    }
 
-      stage('Test'){
+    stage('Test') {
+      steps {
+        echo "Running tests..."
+        // Add real tests if you have them; placeholder for now
+        sh 'echo "No tests yet"'
+      }
+    }
 
-        script {
-          currentDateTime = sh(returnStdout: true, script: 'date -d \'+3 hour\' +%d%m%Y%H%M%S').trim()
+    stage('Build Docker Image') {
+      steps {
+        echo "Building Docker image..."
+        sh "docker build -t $IMAGE_NAME:$IMAGE_TAG ."
+      }
+    }
+
+    stage('Push to Docker Hub') {
+      when {
+        expression { return env.DOCKER_CREDENTIALS_ID }
+      }
+      steps {
+        echo "Pushing Docker image to registry..."
+        withCredentials([usernamePassword(
+          credentialsId: env.DOCKER_CREDENTIALS_ID,
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+          sh "docker push $IMAGE_NAME:$IMAGE_TAG"
         }
-        sh "echo ...tests on ..ddmmyyyhhmmss.. ${currentDateTime}"
-
       }
-
-      stage('Push image') {
-        /* Finally, we'll push the image with two tags:
-         * First, the incremental build number from Jenkins
-         * Second, the 'latest' tag.
-         * Pushing multiple tags is cheap, as all the layers are reused. */
-        docker.withRegistry('https://registry.hub.docker.com', 'docker_credentials') {
-            app.push("${currentDateTime}.${env.BUILD_NUMBER}")
-            app.push("latest")
-        }
-      }
+    }
 
     }
+  }
+
+  post {
+    success {
+      echo 'Pipeline completed successfully!'
+      echo "Image ${IMAGE_NAME}:${IMAGE_TAG} created and pushed successfully"
+    }
+    failure {
+      echo 'Pipeline failed.'
+    }
+  }
+}

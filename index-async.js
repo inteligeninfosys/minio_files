@@ -16,15 +16,15 @@ app.use(cors(corsConfig));
 app.use(Express.json());
 
 
+const parsedPort = parseInt(process.env.MINIO_PORT, 10);
+const port = isNaN(parsedPort) ? 9000 : parsedPort;
 
-var minioClient = new Minio.Client({
-    endPoint: process.env.MINIO_ENDPOINT || '127.0.0.1',
-    port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : 9005,
-    //port: 1 * process.env.MINIO_PORT || parseInt("9005"),
-    //port: 1 * process.env.MINIO_PORT,
-    useSSL: false,
-    accessKey: process.env.ACCESSKEY || 'AKIAIOSFODNN7EXAMPLE',
-    secretKey: process.env.SECRETKEY || 'wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY'
+const minioClient = new Minio.Client({
+  endPoint: (process.env.MINIO_ENDPOINT || '127.0.0.1').replace(/:\d+$/, ''),
+  port: port,
+  useSSL: false,
+  accessKey: process.env.ACCESSKEY,
+  secretKey: process.env.SECRETKEY
 });
 
 

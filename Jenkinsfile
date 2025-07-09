@@ -62,6 +62,12 @@ pipeline {
       }
     }
 
+    stage('Deploy (Run Container)') {
+      steps {
+        echo "Running container locally for test..."
+        sh "docker stop miniofiles || true && docker rm miniofiles || true"
+        sh "docker run -d -p 4400:4400 --name miniofiles $IMAGE_NAME:$IMAGE_TAG"
+      }
     }
   }
 

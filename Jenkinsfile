@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'docker.io/inteligeninfosys/credit-scoring-api'
+    IMAGE_NAME = 'docker.io/inteligeninfosys/minio_files'
     DOCKER_CREDENTIALS_ID = 'dockerhub-creds'  // Jenkins Docker credentials
   }
 
